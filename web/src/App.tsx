@@ -52,12 +52,14 @@ export default function App() {
       name: String(doc.id),
       document: ydoc,
     })
-    provider.on('status', ({ status }) => setCollaborationStatus(status === 'connected' ? 'Connected' : 'Reconnecting…'))
+    provider.on('status', ({ status }: { status: string }) => setCollaborationStatus(status === 'connected' ? 'Connected' : 'Reconnecting…'))
     provider.on('synced', () => setCollaborationStatus('Live'))
     provider.on('authenticationFailed', () => setCollaborationStatus('Access denied'))
     provider.on('disconnect', () => setCollaborationStatus('Reconnecting…'))
     const updateCollaborators = () => {
-      const online = Array.from(provider.awareness.getStates().values())
+      const awareness = provider.awareness
+      if (!awareness) return
+      const online = Array.from(awareness.getStates().values())
         .map(state => state.user as Collaborator | undefined)
         .filter((item): item is Collaborator => Boolean(item?.id && item?.name))
       setCollaborators(Array.from(new Map(online.map(item => [item.id, item])).values()))
