@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ajaia_docs
+      POSTGRES_USER: ajaia
+      POSTGRES_PASSWORD: local_only_change_me
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ajaia -d ajaia_docs"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    environment:
+      APP_NAME: "Ajaia Docs"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8001
+      FRONTEND_URL: http://localhost:5173
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ajaia_docs
+      DB_USERNAME: ajaia
+      DB_PASSWORD: local_only_change_me
+      SESSION_DRIVER: file
+      SESSION_DOMAIN: localhost
+      SESSION_SECURE_COOKIE: "false"
+      SANCTUM_STATEFUL_DOMAINS: localhost:5173,127.0.0.1:5173,localhost:8001,127.0.0.1:8001
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "/usr/local/bin/ajaia-entrypoint"]
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: http://localhost:8001
+      VITE_COLLAB_URL: ws://localhost:1234
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./web:/app
+      - web_node_modules_realtime:/app/node_modules
+    depends_on:
+      - api
+
+  collab:
+    build:
+      context: ./collab
+      dockerfile: Dockerfile
+    environment:
+      PORT: 1234
+      WEB_ORIGIN: http://localhost:5173
+      API_INTERNAL_URL: http://api:8000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ajaia_docs
+      DB_USERNAME: ajaia
+      DB_PASSWORD: local_only_change_me
+    ports:
+      - "127.0.0.1:1234:1234"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  web_node_modules_realtime:
