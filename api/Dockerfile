@@ -16,3 +16,4 @@ COPY docker/entrypoint.sh /usr/local/bin/ajaia-entrypoint
 RUN chmod +x /usr/local/bin/ajaia-entrypoint
 
 EXPOSE 8000
+CMD ["sh", "-c", "php artisan migrate --force && exec php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
